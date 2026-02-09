@@ -1,2 +1,5 @@
 Flask
+gunicorn
 pypdf
+pdf2image
+Pillow
