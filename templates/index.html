@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>オンラインでPDFファイルのページ削除</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        #upload-area {
+            margin-bottom: 10px;
+        }
+
+        #warning {
+            color: red;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #pages {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page {
+            border: 1px solid #ccc;
+            padding: 8px;
+            width: 180px;
+            text-align: center;
+            border-radius: 6px;
+        }
+
+        .page img {
+            width: 160px;
+            border: 1px solid #aaa;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 8px 16px;
+            font-size: 16px;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>オンラインでPDFファイルのページ削除</h1>
+
+<div id="upload-area">
+    <input type="file" id="pdfFile" accept="application/pdf">
+</div>
+
+<div id="warning"></div>
+
+<form action="/download" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" id="hiddenFile" hidden>
+
+    <div id="pages"></div>
+
+    <!-- ★ 初期状態は disabled -->
+    <button type="submit" id="downloadBtn" disabled>
+        選択したページをダウンロード
+    </button>
+</form>
+
+<script src="/static/preview.js"></script>
+
+</body>
+</html>
