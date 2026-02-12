@@ -1,79 +1,48 @@
-from flask import Flask, render_template, request, jsonify, send_file
-from pdf2image import convert_from_bytes
-from io import BytesIO
-import base64
+from flask import Flask, render_template, request, send_file, jsonify
 from PyPDF2 import PdfReader, PdfWriter
+import io
 
 app = Flask(__name__)
-
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
 @app.route("/preview", methods=["POST"])
 def preview():
     file = request.files.get("file")
     if not file:
-        return jsonify(error="ファイルがありません")
+        return jsonify({"error": "ファイルがありません"}), 400
 
-    data = file.read()
+    reader = PdfReader(file)
+    page_count = len(reader.pages)
 
-    if len(data) > MAX_FILE_SIZE:
-        return jsonify(error="ファイルサイズが50MBを超えています")
+    if page_count <= 1:
+        return jsonify({"error": "ページが1ページしかありません"}), 400
 
-    try:
-        # ★ 低解像度（高速）
-        images = convert_from_bytes(
-            data,
-            dpi=60,
-            fmt="png"
-        )
-    except Exception as e:
-        return jsonify(error="PDFの読み込みに失敗しました")
-
-    if len(images) <= 1:
-        return jsonify(error="ページが1ページしかありません")
-
-    pages_base64 = []
-
-    for img in images:
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
-        pages_base64.append(encoded)
-
-    return jsonify(pages=pages_base64)
-
+    return jsonify({"pages": page_count})
 
 @app.route("/download", methods=["POST"])
 def download():
     file = request.files.get("file")
-    pages = request.form.getlist("pages")
-
-    if not file or not pages:
-        return "エラー", 400
+    keep_pages = request.form.getlist("pages")
 
     reader = PdfReader(file)
     writer = PdfWriter()
 
-    for p in pages:
-        writer.add_page(reader.pages[int(p) - 1])
+    for i in keep_pages:
+        writer.add_page(reader.pages[int(i)])
 
-    out = BytesIO()
-    writer.write(out)
-    out.seek(0)
+    output = io.BytesIO()
+    writer.write(output)
+    output.seek(0)
 
     return send_file(
-        out,
+        output,
         as_attachment=True,
         download_name="selected_pages.pdf",
         mimetype="application/pdf"
     )
-
 
 if __name__ == "__main__":
     app.run(debug=True)

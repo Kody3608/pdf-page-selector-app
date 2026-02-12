@@ -1,100 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>オンラインでPDFファイルのページ削除</title>
+<meta charset="UTF-8">
+<title>オンラインでPDFファイルのページ削除</title>
 
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-        }
-
-        h1 {
-            margin-bottom: 10px;
-        }
-
-        #drop-area {
-            border: 2px dashed #999;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        #drop-area.dragover {
-            background-color: #eef;
-            border-color: #00f;
-        }
-
-        #warning {
-            color: red;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        /* ★ 青字ローディング */
-        #loading {
-            color: #0066ff;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        #pages {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .page {
-            border: 1px solid #ccc;
-            padding: 8px;
-            width: 180px;
-            text-align: center;
-            border-radius: 6px;
-        }
-
-        .page img {
-            width: 160px;
-            border: 1px solid #aaa;
-        }
-
-        button {
-            margin-top: 20px;
-            padding: 8px 16px;
-            font-size: 16px;
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-    </style>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+#drop-zone {
+    border: 2px dashed #1e90ff;
+    padding: 30px;
+    text-align: center;
+    color: #1e90ff;
+    margin-bottom: 15px;
+}
+#status {
+    color: blue;
+    font-weight: bold;
+    margin: 10px 0;
+}
+.page { margin: 5px 0; }
+</style>
 </head>
 
 <body>
 
-<!-- ★ render-drag-drop-v2 -->
 <h1>オンラインでPDFファイルのページ削除</h1>
 
-<div id="drop-area">
-    ここにPDFファイルをドラッグ＆ドロップしてください<br>
-    または<br><br>
-    <input type="file" id="pdfFile" accept="application/pdf">
+<div id="drop-zone">
+ここにPDFファイルをドラッグ＆ドロップしてください
+<br>
+または
+<input type="file" id="fileInput" accept="application/pdf">
 </div>
 
-<div id="warning"></div>
-<div id="loading" style="display:none;"></div>
+<div id="status"></div>
 
-<form id="downloadForm" action="/download" method="post" enctype="multipart/form-data">
+<form action="/download" method="post" enctype="multipart/form-data">
     <input type="file" name="file" id="hiddenFile" hidden>
-
     <div id="pages"></div>
-
-    <button type="submit" id="downloadBtn" disabled>
-        選択したページをダウンロード
-    </button>
+    <button type="submit">選択したページをダウンロード</button>
 </form>
 
 <script src="/static/preview.js"></script>
