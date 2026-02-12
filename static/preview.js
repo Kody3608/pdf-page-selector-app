@@ -6,11 +6,27 @@ const warningDiv = document.getElementById("warning");
 const loadingDiv = document.getElementById("loading");
 const downloadBtn = document.getElementById("downloadBtn");
 
-function showLoading(message) {
-    loadingDiv.textContent = message;
+let loadingTimer = null;
+let dotCount = 0;
+
+// ローディング開始
+function startLoading() {
+    dotCount = 0;
+    loadingDiv.textContent = "ページ表示中";
+
+    loadingTimer = setInterval(() => {
+        dotCount = (dotCount + 1) % 4; // 0〜3
+        loadingDiv.textContent =
+            "ページ表示中" + "・".repeat(dotCount);
+    }, 500);
 }
 
-function clearLoading() {
+// ローディング停止
+function stopLoading() {
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
     loadingDiv.textContent = "";
 }
 
@@ -19,7 +35,7 @@ function handleFile(file) {
     warningDiv.textContent = "";
     downloadBtn.disabled = true;
 
-    showLoading("ページ表示中・・・");
+    startLoading();
 
     const formData = new FormData();
     formData.append("file", file);
@@ -35,7 +51,7 @@ function handleFile(file) {
     })
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(res => {
-        clearLoading();
+        stopLoading();
 
         if (!res.ok) {
             warningDiv.textContent = res.data.error;
@@ -70,7 +86,7 @@ function handleFile(file) {
         downloadBtn.disabled = false;
     })
     .catch(() => {
-        clearLoading();
+        stopLoading();
         warningDiv.textContent = "PDFの読み込みに失敗しました。";
     });
 }
