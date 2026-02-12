@@ -34,7 +34,9 @@
             margin-bottom: 10px;
         }
 
+        /* ★ 青字ローディング */
         #loading {
+            color: #0066ff;
             font-weight: bold;
             margin-bottom: 10px;
         }
@@ -73,13 +75,12 @@
 
 <body>
 
-<!-- ★ drag-and-drop-enabled version -->
+<!-- ★ render-drag-drop-v2 -->
 <h1>オンラインでPDFファイルのページ削除</h1>
 
 <div id="drop-area">
     ここにPDFファイルをドラッグ＆ドロップしてください<br>
-    または
-    <br><br>
+    または<br><br>
     <input type="file" id="pdfFile" accept="application/pdf">
 </div>
 
@@ -88,6 +89,7 @@
 
 <form id="downloadForm" action="/download" method="post" enctype="multipart/form-data">
     <input type="file" name="file" id="hiddenFile" hidden>
+
     <div id="pages"></div>
 
     <button type="submit" id="downloadBtn" disabled>

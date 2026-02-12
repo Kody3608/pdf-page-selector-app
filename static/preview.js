@@ -9,9 +9,9 @@ const dropArea = document.getElementById("drop-area");
 
 let loadingTimer = null;
 
-// --------------------
-// ローディング表示
-// --------------------
+/* =========================
+   ローディング制御
+========================= */
 function startLoading(message) {
     let dots = 0;
     loadingDiv.style.display = "block";
@@ -27,9 +27,9 @@ function stopLoading() {
     loadingDiv.style.display = "none";
 }
 
-// --------------------
-// PDF処理
-// --------------------
+/* =========================
+   PDF処理
+========================= */
 async function handlePDF(file) {
     warningDiv.textContent = "";
     pagesDiv.innerHTML = "";
@@ -40,10 +40,17 @@ async function handlePDF(file) {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/preview", {
-        method: "POST",
-        body: formData
-    });
+    let res;
+    try {
+        res = await fetch("/preview", {
+            method: "POST",
+            body: formData
+        });
+    } catch (e) {
+        stopLoading();
+        warningDiv.textContent = "通信エラーが発生しました。";
+        return;
+    }
 
     if (!res.ok) {
         stopLoading();
@@ -59,22 +66,28 @@ async function handlePDF(file) {
         return;
     }
 
-    if (data.pages.length <= 1) {
+    if (!data.pages || data.pages.length <= 1) {
         warningDiv.textContent = "ページが1ページしかありません。";
         return;
     }
 
-    data.pages.forEach((img, index) => {
+    data.pages.forEach((imgBase64, index) => {
+        if (!imgBase64) return;
+
         const div = document.createElement("div");
         div.className = "page";
+
+        const img = document.createElement("img");
+        img.src = `data:image/png;base64,${imgBase64}`;
+        img.alt = `ページ ${index + 1}`;
 
         div.innerHTML = `
             <label>
                 <input type="checkbox" name="pages" value="${index + 1}" checked>
                 ページ ${index + 1}
             </label><br>
-            <img src="data:image/png;base64,${img}">
         `;
+        div.appendChild(img);
 
         pagesDiv.appendChild(div);
     });
@@ -83,18 +96,18 @@ async function handlePDF(file) {
     downloadBtn.disabled = false;
 }
 
-// --------------------
-// ファイル選択
-// --------------------
+/* =========================
+   ファイル選択
+========================= */
 pdfInput.addEventListener("change", () => {
     if (pdfInput.files.length > 0) {
         handlePDF(pdfInput.files[0]);
     }
 });
 
-// --------------------
-// ドラッグ＆ドロップ
-// --------------------
+/* =========================
+   ドラッグ＆ドロップ
+========================= */
 dropArea.addEventListener("dragover", e => {
     e.preventDefault();
     dropArea.classList.add("dragover");
@@ -116,9 +129,9 @@ dropArea.addEventListener("drop", e => {
     }
 });
 
-// --------------------
-// ダウンロード中表示
-// --------------------
+/* =========================
+   ダウンロード中表示
+========================= */
 downloadForm.addEventListener("submit", () => {
     startLoading("ダウンロード中");
     downloadBtn.disabled = true;
