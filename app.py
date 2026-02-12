@@ -1,65 +1,75 @@
-from flask import Flask, render_template, request, send_file, jsonify
-from pypdf import PdfReader, PdfWriter
+from flask import Flask, render_template, request, jsonify, send_file
 from pdf2image import convert_from_bytes
-import io
+from io import BytesIO
 import base64
 
 app = Flask(__name__)
 
-# =========================
-# トップページ
-# =========================
+MAX_PREVIEW_PAGES = 10  # 最大プレビュー枚数
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# =========================
-# PDFを読み込み → 各ページを画像にして返す
-# =========================
 @app.route("/preview", methods=["POST"])
-def preview_pdf():
-    file = request.files.get("file")
-    if not file:
+def preview():
+    if "file" not in request.files:
         return jsonify({"error": "ファイルがありません"}), 400
 
+    file = request.files["file"]
     pdf_bytes = file.read()
 
-    # PDF → 画像（1ページずつ）
-    images = convert_from_bytes(pdf_bytes, dpi=120)
+    try:
+        images = convert_from_bytes(
+            pdf_bytes,
+            dpi=72,              # ★ 低解像度（最重要）
+            fmt="jpeg",
+            thread_count=2
+        )
+    except Exception:
+        return jsonify({"error": "PDFの読み込みに失敗しました。"}), 500
 
-    image_list = []
-    for img in images:
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
+    if len(images) <= 1:
+        return jsonify({"error": "ページが1ページしかありません。"}), 400
+
+    images = images[:MAX_PREVIEW_PAGES]
+
+    pages = []
+    for i, img in enumerate(images):
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=70)
         encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
-        image_list.append(encoded)
 
-    return jsonify({
-        "pages": image_list,
-        "page_count": len(image_list)
-    })
+        pages.append({
+            "page": i + 1,
+            "image": encoded
+        })
+
+    return jsonify({"pages": pages})
 
 
-# =========================
-# 選択されたページだけでPDFを作成
-# =========================
 @app.route("/download", methods=["POST"])
-def download_pdf():
+def download():
     file = request.files.get("file")
-    keep_pages = request.form.getlist("keep_pages")
+    selected_pages = request.form.getlist("pages")
 
-    if not file or not keep_pages:
+    if not file or not selected_pages:
         return "不正なリクエスト", 400
 
-    reader = PdfReader(file)
-    writer = PdfWriter()
+    pdf_bytes = file.read()
+    images = convert_from_bytes(pdf_bytes, dpi=150)
 
-    for i in map(int, keep_pages):
-        writer.add_page(reader.pages[i])
+    selected_images = [images[int(p) - 1] for p in selected_pages]
 
-    output = io.BytesIO()
-    writer.write(output)
+    output = BytesIO()
+    selected_images[0].save(
+        output,
+        format="PDF",
+        save_all=True,
+        append_images=selected_images[1:]
+    )
     output.seek(0)
 
     return send_file(
@@ -70,8 +80,5 @@ def download_pdf():
     )
 
 
-# =========================
-# 起動
-# =========================
 if __name__ == "__main__":
     app.run(debug=True)
