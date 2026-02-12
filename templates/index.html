@@ -14,14 +14,27 @@
             margin-bottom: 10px;
         }
 
-        #upload-area {
-            margin-bottom: 10px;
+        /* ドラッグ＆ドロップエリア */
+        #drop-area {
+            border: 2px dashed #999;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        #drop-area.dragover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+            color: #007bff;
         }
 
         #warning {
             color: red;
-            margin-bottom: 10px;
             font-weight: bold;
+            margin-bottom: 10px;
         }
 
         #pages {
@@ -60,18 +73,25 @@
 
 <h1>オンラインでPDFファイルのページ削除</h1>
 
-<div id="upload-area">
-    <input type="file" id="pdfFile" accept="application/pdf">
+<!-- ドラッグ＆ドロップエリア -->
+<div id="drop-area">
+    ここにPDFファイルをドラッグ＆ドロップしてください<br>
+    またはクリックして選択してください
 </div>
+
+<!-- 実体の file input（非表示） -->
+<input type="file" id="pdfFile" accept="application/pdf" hidden>
 
 <div id="warning"></div>
 
 <form action="/download" method="post" enctype="multipart/form-data">
+    <!-- ダウンロード用に同じPDFを送る -->
     <input type="file" name="file" id="hiddenFile" hidden>
 
+    <!-- ページ一覧 -->
     <div id="pages"></div>
 
-    <!-- ★ 初期状態は disabled -->
+    <!-- 初期状態は無効 -->
     <button type="submit" id="downloadBtn" disabled>
         選択したページをダウンロード
     </button>
