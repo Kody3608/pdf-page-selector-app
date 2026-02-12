@@ -2,10 +2,11 @@ from flask import Flask, render_template, request, jsonify, send_file
 from pdf2image import convert_from_bytes
 from io import BytesIO
 import base64
+from PyPDF2 import PdfReader, PdfWriter
 
 app = Flask(__name__)
 
-MAX_PREVIEW_PAGES = 10  # 最大プレビュー枚数
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
 @app.route("/")
@@ -15,65 +16,59 @@ def index():
 
 @app.route("/preview", methods=["POST"])
 def preview():
-    if "file" not in request.files:
-        return jsonify({"error": "ファイルがありません"}), 400
+    file = request.files.get("file")
+    if not file:
+        return jsonify(error="ファイルがありません")
 
-    file = request.files["file"]
-    pdf_bytes = file.read()
+    data = file.read()
+
+    if len(data) > MAX_FILE_SIZE:
+        return jsonify(error="ファイルサイズが50MBを超えています")
 
     try:
+        # ★ 低解像度（高速）
         images = convert_from_bytes(
-            pdf_bytes,
-            dpi=72,              # ★ 低解像度（最重要）
-            fmt="jpeg",
-            thread_count=2
+            data,
+            dpi=60,
+            fmt="png"
         )
-    except Exception:
-        return jsonify({"error": "PDFの読み込みに失敗しました。"}), 500
+    except Exception as e:
+        return jsonify(error="PDFの読み込みに失敗しました")
 
     if len(images) <= 1:
-        return jsonify({"error": "ページが1ページしかありません。"}), 400
+        return jsonify(error="ページが1ページしかありません")
 
-    images = images[:MAX_PREVIEW_PAGES]
+    pages_base64 = []
 
-    pages = []
-    for i, img in enumerate(images):
+    for img in images:
         buf = BytesIO()
-        img.save(buf, format="JPEG", quality=70)
+        img.save(buf, format="PNG")
         encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
+        pages_base64.append(encoded)
 
-        pages.append({
-            "page": i + 1,
-            "image": encoded
-        })
-
-    return jsonify({"pages": pages})
+    return jsonify(pages=pages_base64)
 
 
 @app.route("/download", methods=["POST"])
 def download():
     file = request.files.get("file")
-    selected_pages = request.form.getlist("pages")
+    pages = request.form.getlist("pages")
 
-    if not file or not selected_pages:
-        return "不正なリクエスト", 400
+    if not file or not pages:
+        return "エラー", 400
 
-    pdf_bytes = file.read()
-    images = convert_from_bytes(pdf_bytes, dpi=150)
+    reader = PdfReader(file)
+    writer = PdfWriter()
 
-    selected_images = [images[int(p) - 1] for p in selected_pages]
+    for p in pages:
+        writer.add_page(reader.pages[int(p) - 1])
 
-    output = BytesIO()
-    selected_images[0].save(
-        output,
-        format="PDF",
-        save_all=True,
-        append_images=selected_images[1:]
-    )
-    output.seek(0)
+    out = BytesIO()
+    writer.write(out)
+    out.seek(0)
 
     return send_file(
-        output,
+        out,
         as_attachment=True,
         download_name="selected_pages.pdf",
         mimetype="application/pdf"
