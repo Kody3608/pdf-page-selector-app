@@ -4,21 +4,18 @@ const pagesDiv = document.getElementById("pages");
 const warningDiv = document.getElementById("warning");
 const loadingDiv = document.getElementById("loading");
 const downloadBtn = document.getElementById("downloadBtn");
-const downloadForm = document.getElementById("downloadForm");
 const dropArea = document.getElementById("drop-area");
 
 let loadingTimer = null;
 
-/* =========================
-   ローディング制御
-========================= */
-function startLoading(message) {
+/* ローディング表示 */
+function startLoading(text) {
     let dots = 0;
     loadingDiv.style.display = "block";
 
     loadingTimer = setInterval(() => {
         dots = (dots + 1) % 4;
-        loadingDiv.textContent = message + "・".repeat(dots);
+        loadingDiv.textContent = text + "・".repeat(dots);
     }, 400);
 }
 
@@ -27,12 +24,10 @@ function stopLoading() {
     loadingDiv.style.display = "none";
 }
 
-/* =========================
-   PDF処理
-========================= */
+/* PDF処理 */
 async function handlePDF(file) {
-    warningDiv.textContent = "";
     pagesDiv.innerHTML = "";
+    warningDiv.textContent = "";
     downloadBtn.disabled = true;
 
     startLoading("ページ表示中");
@@ -40,23 +35,10 @@ async function handlePDF(file) {
     const formData = new FormData();
     formData.append("file", file);
 
-    let res;
-    try {
-        res = await fetch("/preview", {
-            method: "POST",
-            body: formData
-        });
-    } catch (e) {
-        stopLoading();
-        warningDiv.textContent = "通信エラーが発生しました。";
-        return;
-    }
-
-    if (!res.ok) {
-        stopLoading();
-        warningDiv.textContent = "PDFの読み込みに失敗しました。";
-        return;
-    }
+    const res = await fetch("/preview", {
+        method: "POST",
+        body: formData
+    });
 
     const data = await res.json();
     stopLoading();
@@ -66,29 +48,22 @@ async function handlePDF(file) {
         return;
     }
 
-    if (!data.pages || data.pages.length <= 1) {
-        warningDiv.textContent = "ページが1ページしかありません。";
-        return;
-    }
-
-    data.pages.forEach((imgBase64, index) => {
-        if (!imgBase64) return;
-
+    data.pages.forEach((b64, index) => {
         const div = document.createElement("div");
         div.className = "page";
 
         const img = document.createElement("img");
-        img.src = `data:image/png;base64,${imgBase64}`;
-        img.alt = `ページ ${index + 1}`;
+        img.src = "data:image/png;base64," + b64;
 
-        div.innerHTML = `
-            <label>
-                <input type="checkbox" name="pages" value="${index + 1}" checked>
-                ページ ${index + 1}
-            </label><br>
-        `;
         div.appendChild(img);
 
+        const label = document.createElement("label");
+        label.innerHTML = `
+            <input type="checkbox" name="pages" value="${index + 1}" checked>
+            ページ ${index + 1}
+        `;
+
+        div.appendChild(label);
         pagesDiv.appendChild(div);
     });
 
@@ -96,18 +71,14 @@ async function handlePDF(file) {
     downloadBtn.disabled = false;
 }
 
-/* =========================
-   ファイル選択
-========================= */
+/* ファイル選択 */
 pdfInput.addEventListener("change", () => {
     if (pdfInput.files.length > 0) {
         handlePDF(pdfInput.files[0]);
     }
 });
 
-/* =========================
-   ドラッグ＆ドロップ
-========================= */
+/* ドラッグ＆ドロップ */
 dropArea.addEventListener("dragover", e => {
     e.preventDefault();
     dropArea.classList.add("dragover");
@@ -125,14 +96,6 @@ dropArea.addEventListener("drop", e => {
     if (file && file.type === "application/pdf") {
         handlePDF(file);
     } else {
-        warningDiv.textContent = "PDFファイルを選択してください。";
+        warningDiv.textContent = "PDFファイルを選択してください";
     }
-});
-
-/* =========================
-   ダウンロード中表示
-========================= */
-downloadForm.addEventListener("submit", () => {
-    startLoading("ダウンロード中");
-    downloadBtn.disabled = true;
 });
