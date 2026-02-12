@@ -3,114 +3,103 @@ const pdfInput = document.getElementById("pdfFile");
 const hiddenFile = document.getElementById("hiddenFile");
 const pagesDiv = document.getElementById("pages");
 const warningDiv = document.getElementById("warning");
+const loadingDiv = document.getElementById("loading");
 const downloadBtn = document.getElementById("downloadBtn");
 
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+function showLoading(message) {
+    loadingDiv.textContent = message;
+}
 
-// =======================
-// 共通：PDF読み込み処理
-// =======================
-function handlePdf(file) {
+function clearLoading() {
+    loadingDiv.textContent = "";
+}
+
+function handleFile(file) {
     pagesDiv.innerHTML = "";
     warningDiv.textContent = "";
     downloadBtn.disabled = true;
 
-    if (!file) return;
-
-    // サイズ制限
-    if (file.size > MAX_SIZE) {
-        warningDiv.textContent = "ファイルサイズは50MB以下にしてください。";
-        return;
-    }
-
-    // hidden file にセット（ダウンロード用）
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    hiddenFile.files = dt.files;
+    showLoading("ページ表示中・・・");
 
     const formData = new FormData();
     formData.append("file", file);
+
+    // ダウンロード用に同じPDFを保持
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    hiddenFile.files = dt.files;
 
     fetch("/preview", {
         method: "POST",
         body: formData
     })
-    .then(res => res.json())
-    .then(data => {
-        if (data.page_count <= 1) {
-            warningDiv.textContent = "ページが1ページしかありません。";
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(res => {
+        clearLoading();
+
+        if (!res.ok) {
+            warningDiv.textContent = res.data.error;
             return;
         }
 
-        data.pages.forEach((imgBase64, index) => {
-            const pageDiv = document.createElement("div");
-            pageDiv.className = "page";
+        res.data.pages.forEach(p => {
+            const div = document.createElement("div");
+            div.className = "page";
+
+            const img = document.createElement("img");
+            img.src = `data:image/jpeg;base64,${p.image}`;
+            img.alt = `ページ ${p.page}`;
 
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
-            checkbox.name = "keep_pages";
-            checkbox.value = index;
+            checkbox.name = "pages";
+            checkbox.value = p.page;
             checkbox.checked = true;
-
-            checkbox.addEventListener("change", () => {
-                const checked = document.querySelectorAll(
-                    'input[name="keep_pages"]:checked'
-                );
-                downloadBtn.disabled = checked.length === 0;
-            });
-
-            const img = document.createElement("img");
-            img.src = "data:image/png;base64," + imgBase64;
 
             const label = document.createElement("label");
             label.appendChild(checkbox);
-            label.append(` ページ ${index + 1}`);
+            label.appendChild(document.createElement("br"));
+            label.appendChild(img);
+            label.appendChild(document.createElement("br"));
+            label.append(`ページ ${p.page}`);
 
-            pageDiv.appendChild(img);
-            pageDiv.appendChild(label);
-            pagesDiv.appendChild(pageDiv);
+            div.appendChild(label);
+            pagesDiv.appendChild(div);
         });
 
         downloadBtn.disabled = false;
     })
     .catch(() => {
+        clearLoading();
         warningDiv.textContent = "PDFの読み込みに失敗しました。";
     });
 }
 
-// =======================
-// クリック選択
-// =======================
-dropArea.addEventListener("click", () => {
-    pdfInput.click();
-});
-
+// ファイル選択
 pdfInput.addEventListener("change", () => {
-    const file = pdfInput.files[0];
-    handlePdf(file);
-});
-
-// =======================
-// ドラッグ＆ドロップ
-// =======================
-dropArea.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropArea.classList.add("dragover");
-});
-
-dropArea.addEventListener("dragleave", () => {
-    dropArea.classList.remove("dragover");
-});
-
-dropArea.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropArea.classList.remove("dragover");
-
-    const file = e.dataTransfer.files[0];
-    if (!file || file.type !== "application/pdf") {
-        warningDiv.textContent = "PDFファイルを選択してください。";
-        return;
+    if (pdfInput.files.length > 0) {
+        handleFile(pdfInput.files[0]);
     }
+});
 
-    handlePdf(file);
+// ドラッグ＆ドロップ
+["dragenter", "dragover"].forEach(event => {
+    dropArea.addEventListener(event, e => {
+        e.preventDefault();
+        dropArea.classList.add("dragover");
+    });
+});
+
+["dragleave", "drop"].forEach(event => {
+    dropArea.addEventListener(event, e => {
+        e.preventDefault();
+        dropArea.classList.remove("dragover");
+    });
+});
+
+dropArea.addEventListener("drop", e => {
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+        handleFile(file);
+    }
 });
