@@ -6,46 +6,57 @@ import base64
 
 app = Flask(__name__)
 
+# =========================
+# トップページ
+# =========================
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# PDFアップロード → 各ページのプレビュー画像を生成
-@app.route("/upload", methods=["POST"])
-def upload_pdf():
-    file = request.files["file"]
+
+# =========================
+# PDFを読み込み → 各ページを画像にして返す
+# =========================
+@app.route("/preview", methods=["POST"])
+def preview_pdf():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "ファイルがありません"}), 400
+
     pdf_bytes = file.read()
 
-    reader = PdfReader(io.BytesIO(pdf_bytes))
+    # PDF → 画像（1ページずつ）
     images = convert_from_bytes(pdf_bytes, dpi=120)
 
-    previews = []
-    for i, img in enumerate(images):
+    image_list = []
+    for img in images:
         buf = io.BytesIO()
         img.save(buf, format="PNG")
-        img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-        previews.append({
-            "page": i,
-            "image": f"data:image/png;base64,{img_b64}"
-        })
+        encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
+        image_list.append(encoded)
 
     return jsonify({
-        "page_count": len(reader.pages),
-        "previews": previews
+        "pages": image_list,
+        "page_count": len(image_list)
     })
 
-# チェックされたページだけでPDF生成
+
+# =========================
+# 選択されたページだけでPDFを作成
+# =========================
 @app.route("/download", methods=["POST"])
 def download_pdf():
-    file = request.files["file"]
-    pages = request.form.getlist("pages")
+    file = request.files.get("file")
+    keep_pages = request.form.getlist("keep_pages")
+
+    if not file or not keep_pages:
+        return "不正なリクエスト", 400
 
     reader = PdfReader(file)
     writer = PdfWriter()
 
-    for p in pages:
-        writer.add_page(reader.pages[int(p)])
+    for i in map(int, keep_pages):
+        writer.add_page(reader.pages[i])
 
     output = io.BytesIO()
     writer.write(output)
@@ -53,14 +64,14 @@ def download_pdf():
 
     return send_file(
         output,
-        mimetype="application/pdf",
         as_attachment=True,
-        download_name="selected_pages.pdf"
+        download_name="selected_pages.pdf",
+        mimetype="application/pdf"
     )
 
+
+# =========================
+# 起動
+# =========================
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True
-    )
+    app.run(debug=True)
