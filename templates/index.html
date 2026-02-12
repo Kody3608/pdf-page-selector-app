@@ -10,8 +10,13 @@
             margin: 20px;
         }
 
+        h1 {
+            margin-bottom: 10px;
+        }
+
         #drop-area {
             border: 2px dashed #999;
+            border-radius: 10px;
             padding: 30px;
             text-align: center;
             color: #666;
@@ -20,6 +25,7 @@
 
         #drop-area.dragover {
             background-color: #eef;
+            border-color: #00f;
         }
 
         #warning {
@@ -44,6 +50,7 @@
             padding: 8px;
             width: 180px;
             text-align: center;
+            border-radius: 6px;
         }
 
         .page img {
@@ -66,20 +73,21 @@
 
 <body>
 
+<!-- ★ drag-and-drop-enabled version -->
 <h1>オンラインでPDFファイルのページ削除</h1>
 
 <div id="drop-area">
     ここにPDFファイルをドラッグ＆ドロップしてください<br>
     または
+    <br><br>
     <input type="file" id="pdfFile" accept="application/pdf">
 </div>
 
 <div id="warning"></div>
-<div id="loading"></div>
+<div id="loading" style="display:none;"></div>
 
-<form action="/download" method="post" enctype="multipart/form-data">
+<form id="downloadForm" action="/download" method="post" enctype="multipart/form-data">
     <input type="file" name="file" id="hiddenFile" hidden>
-
     <div id="pages"></div>
 
     <button type="submit" id="downloadBtn" disabled>
@@ -88,6 +96,5 @@
 </form>
 
 <script src="/static/preview.js"></script>
-
 </body>
 </html>
