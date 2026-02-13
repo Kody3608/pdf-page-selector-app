@@ -5,7 +5,11 @@
 <title>オンラインでPDFファイルのページ削除</title>
 
 <style>
-body { font-family: sans-serif; margin: 20px; }
+body {
+    font-family: sans-serif;
+    margin: 20px;
+}
+
 #drop-zone {
     border: 2px dashed #1e90ff;
     padding: 30px;
@@ -13,13 +17,48 @@ body { font-family: sans-serif; margin: 20px; }
     color: #1e90ff;
     margin-bottom: 15px;
 }
+
 #status {
     color: blue;
     font-weight: bold;
     margin: 10px 0;
 }
-.page { margin: 10px 0; }
-img { max-width: 300px; border: 1px solid #ccc; }
+
+/* ▼ ページ一覧を横並びにする */
+#pages {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+/* ▼ 各ページのカード */
+.page {
+    text-align: center;
+    border: 1px solid #ddd;
+    padding: 6px;
+    border-radius: 6px;
+    background: #fafafa;
+    font-size: 12px;
+}
+
+/* ▼ PDFサムネイルを小さく */
+.page img {
+    width: 120px;
+    height: auto;
+    display: block;
+    margin: 6px auto;
+    cursor: pointer;
+}
+
+/* ▼ チェックボックスを押しやすく */
+.page input[type="checkbox"] {
+    transform: scale(1.2);
+}
+
+/* ▼ ちょっとしたUI改善 */
+.page img:hover {
+    transform: scale(1.05);
+}
 </style>
 </head>
 
@@ -28,9 +67,9 @@ img { max-width: 300px; border: 1px solid #ccc; }
 <h1>オンラインでPDFファイルのページ削除</h1>
 
 <div id="drop-zone">
-ここにPDFファイルをドラッグ＆ドロップしてください<br>
-または
-<input type="file" id="fileInput" accept="application/pdf">
+    ここにPDFファイルをドラッグ＆ドロップしてください<br>
+    または
+    <input type="file" id="fileInput" accept="application/pdf">
 </div>
 
 <div id="status"></div>
